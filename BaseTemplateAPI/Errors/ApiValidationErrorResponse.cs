@@ -5,12 +5,12 @@ using System.Threading.Tasks;
 
 namespace BaseTemplateAPI.Errors
 {
-	public class ApiValidationErrorResponse : ApiResponse
-	{
-		public ApiValidationErrorResponse() : base(400)
-		{
-		}
+    public class ApiValidationErrorResponse : ApiResponse
+    {
+        public ApiValidationErrorResponse() : base(400)
+        {
+        }
 
-		public IEnumerable<string> Errors { get; set; }
-	}
+        public IEnumerable<string> Errors { get; set; }
+    }
 }

@@ -1,5 +1,8 @@
 using BaseTemplateAPI.Errors;
+using BaseTemplateAPI.Extensions;
+using BaseTemplateAPI.Helpers;
 using BaseTemplateAPI.Middleware;
+using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -13,6 +16,7 @@ using Microsoft.OpenApi.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace BaseTemplateAPI
@@ -29,27 +33,26 @@ namespace BaseTemplateAPI
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
-            services.AddControllers();
-            services.Configure<ApiBehaviorOptions>(options => {
-                options.InvalidModelStateResponseFactory = actionContext => {
-                    var errors = actionContext.ModelState
-                    .Where(e => e.Value.Errors.Count > 0)
-                    .SelectMany(x => x.Value.Errors)
-                    .Select(x => x.ErrorMessage)
-                    .ToArray();
-
-                    var errorResponse = new ApiValidationErrorResponse
-                    {
-                        Errors = errors
-                    };
-
-                    return new BadRequestObjectResult(errorResponse);
-                };
-            });
-            services.AddSwaggerGen(c =>
+            services.AddAutoMapper(typeof(MappingProfiles));
+            services.AddControllers().AddFluentValidation(cfg => {
+                cfg.RegisterValidatorsFromAssemblyContaining<Startup>();
+            }).AddJsonOptions(opts =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "BaseTemplateAPI", Version = "v1" });
+                opts.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            });
+            services.SwaggerServices();
+            services.StorageServices(Configuration);
+            services.AddApplicationServices(Configuration);
+
+            services.AddCors(opt => {
+                opt.AddPolicy("CorsPolicy", policy =>
+                {
+                    policy
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowAnyOrigin()
+                    .WithExposedHeaders("WWW-Authenticate");
+                });
             });
         }
 
@@ -60,12 +63,16 @@ namespace BaseTemplateAPI
             if (env.IsDevelopment())
             {
                 app.UseSwagger();
-                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "BaseTemplateAPI v1"));
+                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "API v1"));
             }
 
             app.UseHttpsRedirection();
 
             app.UseRouting();
+
+            app.UseCors("CorsPolicy");
+
+            app.UseAuthentication();
 
             app.UseAuthorization();
 
