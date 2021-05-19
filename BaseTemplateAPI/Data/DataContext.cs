@@ -38,6 +38,12 @@ namespace BaseTemplateAPI.Data
 			return base.SaveChanges();
 		}
 
+		public override int SaveChanges(bool acceptAllChangesOnSuccess)
+		{
+			AddTimestamps();
+			return base.SaveChanges();
+		}
+
 		public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
 		{
 			AddTimestamps();
@@ -52,12 +58,11 @@ namespace BaseTemplateAPI.Data
 
 		private void AddTimestamps()
 		{
-			var entities = ChangeTracker.Entries()
-				.Where(x => x.Entity is BaseEntity && (x.State == EntityState.Added || x.State == EntityState.Modified));
+			var entities = ChangeTracker.Entries().Where(x => x.Entity is BaseEntity && (x.State == EntityState.Added || x.State == EntityState.Modified));
 
 			foreach (var entity in entities)
 			{
-				var now = DateTime.Now; // current datetime
+				var now = DateTime.Now;
 
 				if (entity.State == EntityState.Added)
 				{
